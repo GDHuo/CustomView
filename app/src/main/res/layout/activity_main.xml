@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     tools:context="huo.com.customview.MainActivity">
 
     <!--<TextView
@@ -17,8 +18,26 @@
     <huo.com.customview.CustomView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:titleText="4122asgg"
+        app:image="@mipmap/ic_launcher"
+        app:imageScaleType="center"
+        app:titleText="asdfsrewewerwerggggggffff"
+        app:titleTextColor="#ff0000"
+        app:titleTextSize="15sp"/>
+    <huo.com.customview.CustomView
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        app:image="@mipmap/ic_launcher"
+        app:imageScaleType="center"
+        app:titleText="asdfsrewewerwegggggwewewegshmn"
+        app:titleTextColor="#ff0000"
+        app:titleTextSize="15sp"/>
+    <huo.com.customview.CustomView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:image="@mipmap/ic_launcher"
+        app:imageScaleType="center"
+        app:titleText="as"
         app:titleTextColor="#ff0000"
         app:titleTextSize="15sp"/>
 
-</android.support.constraint.ConstraintLayout>
+</LinearLayout>

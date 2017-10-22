@@ -2,11 +2,15 @@ package huo.com.customview;
 
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.support.annotation.Nullable;
+import android.text.TextPaint;
+import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.View;
@@ -19,9 +23,15 @@ public class CustomView extends View{
 
     private final int mTitleTextSize;
     private final String mTitleText;
-    private final int mTitleColor;
+    private final int mTextColor;
     private final Paint mPaint;
-    private final Rect mBound;
+    private final Rect mTextBound;
+    private final Bitmap mImage;
+    private final int mImageScale;
+    private final Rect rect;
+    private int mWidth;
+    private int mHeight;
+    private static final int IMAGE_SCALE_FITXY = 0;
 
     public CustomView(Context context) {
         this(context,null);
@@ -35,14 +45,17 @@ public class CustomView extends View{
         super(context, attrs, defStyleAttr);
         TypedArray a = context.getTheme().obtainStyledAttributes(attrs, R.styleable.CustomTitleView, defStyleAttr, 0);
         mTitleText = a.getString(a.getIndex(R.styleable.CustomTitleView_titleText));
-        mTitleColor = a.getColor(a.getIndex(R.styleable.CustomTitleView_titleTextColor), Color.BLACK);
+        mTextColor = a.getColor(a.getIndex(R.styleable.CustomTitleView_titleTextColor), Color.BLACK);
         mTitleTextSize = a.getDimensionPixelSize(a.getIndex(R.styleable.CustomTitleView_titleTextSize),
                 (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP,16,getResources().getDisplayMetrics()));
+        mImage = BitmapFactory.decodeResource(getResources(),a.getResourceId(a.getIndex(R.styleable.CustomTitleView_image),0));
+        mImageScale = a.getInt(a.getIndex(R.styleable.CustomTitleView_imageScaleType),0);
         a.recycle();
+        rect = new Rect();
         mPaint = new Paint();
         mPaint.setTextSize(mTitleTextSize);
-        mBound = new Rect();
-        mPaint.getTextBounds(mTitleText,0,mTitleText.length(), mBound);//获得文字的宽高信息
+        mTextBound = new Rect();
+        mPaint.getTextBounds(mTitleText,0,mTitleText.length(), mTextBound);//获得文字的宽高信息
     }
 
 //    MeasureSpec的specMode,一共三种类型：
@@ -55,31 +68,68 @@ public class CustomView extends View{
         int widthSize = MeasureSpec.getSize(widthMeasureSpec);
         int heightMode = MeasureSpec.getMode(heightMeasureSpec);
         int heightSize = MeasureSpec.getSize(heightMeasureSpec);
-        int width,height;
         if(widthMode == MeasureSpec.EXACTLY) {
-            width = widthSize;
+            mWidth = widthSize;
         } else {
-            float textWidth = mBound.width();
-            int desired = (int) (getPaddingLeft() + textWidth + getPaddingRight());
-            width = desired;
+            //由图片决定的宽
+            int desireByImg = getPaddingLeft() + getPaddingRight() + mImage.getWidth();
+            //由文字决定的宽
+            int desireByTitle = getPaddingLeft() + getPaddingRight() + mTextBound.width();
+            if(widthMode == MeasureSpec.AT_MOST) {//wrap_content
+                int desire = Math.max(desireByImg, desireByTitle);
+                mWidth = Math.min(desire, widthSize);
+            }
         }
 
         if(heightMode == MeasureSpec.EXACTLY) {
-            height = heightSize;
+            mHeight = heightSize;
         } else {
-            float textHeight = mBound.height();
-            int desired = (int) (getPaddingTop() + textHeight + getPaddingBottom());
-            height = desired;
+            int desired = getPaddingTop() + getPaddingBottom() + mImage.getHeight() + mTextBound.height();
+            if(heightMode == MeasureSpec.AT_MOST) {//wrap_content
+                mHeight = Math.min(desired, heightSize);
+            }
         }
-        setMeasuredDimension(width, height);
+        setMeasuredDimension(mWidth, mHeight);
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
-        mPaint.setColor(Color.YELLOW);
-        canvas.drawRect(0,0,getMeasuredWidth(),getMeasuredHeight(),mPaint);
+        mPaint.setStrokeWidth(4);
+        mPaint.setStyle(Paint.Style.STROKE);//空心
+        mPaint.setColor(Color.CYAN);
+        canvas.drawRect(0, 0, getMeasuredWidth(), getMeasuredHeight(), mPaint);
 
-        mPaint.setColor(mTitleColor);
-        canvas.drawText(mTitleText, getWidth()/2 - mBound.width()/2, getHeight()/2 + (Math.abs(mBound.top) - mBound.bottom) / 2, mPaint);//x:文字的一半 y：文字的下边界
+        rect.left = getPaddingLeft();
+        rect.right = mWidth - getPaddingLeft();
+        rect.top = getPaddingTop();
+        rect.bottom = mHeight - getPaddingBottom();
+
+        mPaint.setColor(mTextColor);
+        mPaint.setStyle(Paint.Style.FILL);
+
+        //当前设置的宽度小于字体需要的宽度，将字体改为XXX...
+        if(mTextBound.width() > mWidth) {
+            TextPaint paint = new TextPaint(mPaint);
+            String msg = TextUtils.ellipsize(mTitleText, paint, (float)mWidth - getPaddingLeft() - getPaddingRight(),
+                    TextUtils.TruncateAt.END).toString();
+            canvas.drawText(msg, getPaddingLeft(), mHeight - getPaddingBottom() - (Math.abs(mTextBound.top) - mTextBound.bottom) / 2, mPaint);
+        } else {
+            //正常情况，将字体居中
+            canvas.drawText(mTitleText, mWidth/2 - mTextBound.width() * 1.0f / 2,
+                    mHeight - getPaddingBottom() - (Math.abs(mTextBound.top) - mTextBound.bottom) / 2, mPaint);
+        }
+
+        //取消使用掉的块
+        rect.bottom -= mTextBound.height();
+        if(mImageScale == IMAGE_SCALE_FITXY) {
+            canvas.drawBitmap(mImage, null, rect, mPaint);
+        } else {
+            rect.left = mWidth / 2 - mImage.getWidth() / 2;
+            rect.right = mWidth / 2 + mImage.getWidth() / 2;
+            rect.top = (mHeight - mTextBound.height()) / 2 - mImage.getHeight()/2;
+            rect.bottom = (mHeight - mTextBound.height()) / 2 + mImage.getHeight() / 2;
+
+            canvas.drawBitmap(mImage, null, rect, mPaint);//图片为盒子模型
+        }
     }
 }
